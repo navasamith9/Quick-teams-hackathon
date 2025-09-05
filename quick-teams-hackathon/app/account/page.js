@@ -56,7 +56,7 @@ export default function AccountPage() {
       name,
       skills: skillsArray,
       availability,
-      updated_at: new Date(),
+      
     })
 
     if (error) {
