@@ -1,12 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { User } from '@supabase/supabase-js' // <-- ADDED THIS IMPORT
 import { supabase } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link' // Import the Link component for navigation
+import Link from 'next/link'
 
 export default function HomePage() {
   const router = useRouter()
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState<User | null>(null) // <-- ADDED THE TYPE HERE
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
