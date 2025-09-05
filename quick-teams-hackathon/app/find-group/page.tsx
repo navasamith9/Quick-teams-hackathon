@@ -14,53 +14,67 @@ interface Group {
 
 export default function FindGroupPage() {
   const router = useRouter()
-  // Tell useState that 'groups' will be an array of Group objects
   const [groups, setGroups] = useState<Group[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchSessionAndGroups = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-
-      if (!session) {
+    const fetchAndFilterGroups = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
         router.push('/login')
         return
       }
 
-      // Fetch all groups from the 'groups' table
-      const { data, error } = await supabase.from('groups').select('*')
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('skills')
+        .eq('id', user.id)
+        .single()
 
-      if (error) {
-        console.error('Error fetching groups:', error)
-      } else {
-        setGroups(data)
+      const userSkills = (profileError || !profileData) ? [] : profileData.skills || []
+      
+      const { data: allGroups, error: groupError } = await supabase
+        .from('groups')
+        .select('*')
+
+      if (groupError) {
+        console.error('Error fetching groups:', groupError)
+      } else if (allGroups) {
+        // Add the type hint '(group: Group)' here
+        const filteredGroups = allGroups.filter((group: Group) => {
+          if (!group.required_skills || group.required_skills.length === 0) {
+            return true;
+          }
+          return group.required_skills.some(requiredSkill => userSkills.includes(requiredSkill))
+        });
+        setGroups(filteredGroups)
       }
       setLoading(false)
     }
 
-    fetchSessionAndGroups()
+    fetchAndFilterGroups()
   }, [router])
 
   if (loading) {
-    return <div>Loading...</div>
+    return <div>Finding matching groups...</div>
   }
 
   return (
     <div style={{ padding: '2rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>Find a Group</h1>
+        <h1>Groups Matching Your Skills</h1>
         <Link href="/" style={{ marginRight: '1rem' }}>Back to Home</Link>
       </div>
-      <p>Browse groups and find a team to join.</p>
-
+      <p>These groups are looking for skills you have, or are open to anyone.</p>
+      
       <div style={{ marginTop: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
-        {groups.map((group) => (
+        {groups.length > 0 ? groups.map((group) => (
           <div key={group.id} style={{ border: '1px solid #ccc', padding: '1rem', borderRadius: '8px' }}>
             <h3 style={{ margin: '0 0 0.5rem 0' }}>{group.name || 'No name set'}</h3>
             <p><strong>Description:</strong> {group.project_description || 'No description'}</p>
-            <p><strong>Skills Needed:</strong> {group.required_skills ? group.required_skills.join(', ') : 'None listed'}</p>
+            <p><strong>Skills Needed:</strong> {group.required_skills && group.required_skills.length > 0 ? group.required_skills.join(', ') : 'None listed'}</p>
           </div>
-        ))}
+        )) : <p>No groups were found that match your criteria.</p>}
       </div>
     </div>
   )

@@ -1,13 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { User } from '@supabase/supabase-js' // <-- ADDED THIS IMPORT
+import { User } from '@supabase/supabase-js'
 import { supabase } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 export default function HomePage() {
   const router = useRouter()
-  const [user, setUser] = useState<User | null>(null) // <-- ADDED THE TYPE HERE
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -34,9 +34,14 @@ export default function HomePage() {
 
   return (
     <div style={{ padding: '4rem', textAlign: 'center' }}>
-      <div style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
+      <div style={{ position: 'absolute', top: '1rem', right: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        {/* --- THIS IS THE NEW BUTTON --- */}
+        <Link href="/account" style={{ padding: '8px 12px', textDecoration: 'none', color: 'white' }}>
+          My Profile
+        </Link>
         <button onClick={handleLogout} style={{ padding: '8px 12px' }}>Logout</button>
       </div>
+      
       <h1>Welcome, {user?.email}!</h1>
       <p style={{ fontSize: '1.2rem', color: '#ccc' }}>What would you like to do today?</p>
       
