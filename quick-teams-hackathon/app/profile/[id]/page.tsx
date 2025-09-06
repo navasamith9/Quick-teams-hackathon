@@ -53,10 +53,10 @@ export default async function ProfilePage({ params }: { params: { id: string } }
                             <div className="mb-6">
                                 <h2 className="text-xl font-semibold text-gray-700 border-b pb-2 mb-3">About</h2>
                                 <p className="text-gray-600">
-                                    {/* You should add a 'bio' or 'about' column to your profiles table */}
-                                    This is a placeholder for the user's bio. It's a great place for them to introduce themselves, 
-                                    their passions, and their professional background.
-                                </p>
+    {/* You should add a 'bio' or 'about' column to your profiles table */}
+    This is a placeholder for the user&apos;s bio. It&apos;s a great place for them to introduce themselves, 
+    their passions, and their professional background.
+</p>
                             </div>
 
                              <div className="mb-6">
