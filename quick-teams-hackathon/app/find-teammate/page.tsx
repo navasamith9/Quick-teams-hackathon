@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { User } from '@supabase/supabase-js'
 
 interface Profile {
   id: string;
@@ -11,72 +12,104 @@ interface Profile {
   availability: string | null;
 }
 
+interface Group {
+  id: string;
+  name: string | null;
+}
+
 export default function FindTeammatePage() {
   const router = useRouter()
   const [profiles, setProfiles] = useState<Profile[]>([])
+  const [myGroups, setMyGroups] = useState<Group[]>([])
+  const [selectedGroup, setSelectedGroup] = useState<string>('')
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   
-  // State for temporary filter inputs in the modal
   const [skills, setSkills] = useState('')
   const [availability, setAvailability] = useState('')
-
-  // State to hold the *applied* filters
   const [appliedSkills, setAppliedSkills] = useState('')
   const [appliedAvailability, setAppliedAvailability] = useState('')
 
   useEffect(() => {
-    const fetchSessionAndProfiles = async () => {
+    const fetchData = async () => {
       setLoading(true)
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
         router.push('/login'); return
       }
+      const currentUser = session.user
+      setUser(currentUser)
 
-      // Start building the query
+      // Fetch profiles based on filters
       let query = supabase.from('profiles').select('*')
-
-      // If skills filter is applied, add it to the query
       if (appliedSkills) {
         const skillsArray = appliedSkills.split(',').map(skill => skill.trim());
         query = query.contains('skills', skillsArray)
       }
-
-      // If availability filter is applied, add it to the query
       if (appliedAvailability) {
-        query = query.gte('availability', appliedAvailability) // gte = greater than or equal to
+        query = query.gte('availability', appliedAvailability)
       }
+      const { data: profilesData, error: profilesError } = await query
+      if (profilesError) console.error('Error fetching profiles:', profilesError)
+      else setProfiles(profilesData || [])
 
-      // Execute the final query
-      const { data, error } = await query
-
-      if (error) {
-        console.error('Error fetching profiles:', error)
-      } else {
-        setProfiles(data)
+      // Fetch groups owned by the current user for the dropdown
+      const { data: groupsData, error: groupsError } = await supabase
+        .from('groups')
+        .select('id, name')
+        .eq('owner_id', currentUser.id)
+      if (groupsError) console.error('Error fetching groups:', groupsError)
+      else if (groupsData) {
+        setMyGroups(groupsData)
+        if (groupsData.length > 0) {
+          setSelectedGroup(groupsData[0].id)
+        }
       }
+      
       setLoading(false)
     }
-
-    fetchSessionAndProfiles()
-  }, [router, appliedSkills, appliedAvailability]) // Re-run this effect when filters change
+    fetchData()
+  }, [router, appliedSkills, appliedAvailability])
 
   const handleFilterSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Set the applied filters, which will trigger the useEffect to re-run
     setAppliedSkills(skills);
     setAppliedAvailability(availability);
     setIsModalOpen(false);
   }
 
+  const handleInvite = async (profileId: string) => {
+    if (!selectedGroup) {
+      alert('Please select a group to invite someone to.');
+      return;
+    }
+    if (!user) {
+      alert('You must be logged in to send invites.');
+      return;
+    }
+    const { error } = await supabase.from('invitations').insert({
+      group_id: selectedGroup,
+      sender_id: user.id,
+      recipient_id: profileId,
+      status: 'pending'
+    });
+    if (error) {
+      alert('Error sending invitation!');
+      console.error(error);
+    } else {
+      alert('Invitation sent successfully!');
+    }
+  }
+
+  if (loading) {
+    return <div>Loading...</div>
+  }
+
   return (
     <div style={{ padding: '2rem' }}>
       {isModalOpen && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)', display: 'flex',
-          alignItems: 'center', justifyContent: 'center', zIndex: 1000
-        }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: '#333', padding: '2rem', borderRadius: '8px', color: 'white', minWidth: '300px' }}>
             <h2>Filter Requirements</h2>
             <form onSubmit={handleFilterSubmit}>
@@ -97,7 +130,6 @@ export default function FindTeammatePage() {
         </div>
       )}
 
-      {/* --- MAIN PAGE CONTENT --- */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>Find a Teammate</h1>
         <div>
@@ -105,14 +137,27 @@ export default function FindTeammatePage() {
           <Link href="/" style={{ marginRight: '1rem' }}>Back to Home</Link>
         </div>
       </div>
+      
+      <div style={{ margin: '1rem 0', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <label htmlFor="group-select">Invite to your group:</label>
+        <select id="group-select" value={selectedGroup} onChange={(e) => setSelectedGroup(e.target.value)} style={{ padding: '8px' }}>
+          {myGroups.map(group => (
+            <option key={group.id} value={group.id}>{group.name}</option>
+          ))}
+        </select>
+      </div>
+
       <p>Browse profiles and find the perfect person for your team.</p>
       
       <div style={{ marginTop: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
         {profiles.length > 0 ? profiles.map((profile) => (
           <div key={profile.id} style={{ border: '1px solid #ccc', padding: '1rem', borderRadius: '8px' }}>
-            <h3 style={{ margin: '0 0 0.5rem 0' }}>{profile.name || 'No name set'}</h3>
+            <h3>{profile.name || 'No name set'}</h3>
             <p><strong>Skills:</strong> {profile.skills ? profile.skills.join(', ') : 'No skills listed'}</p>
             <p><strong>Availability:</strong> {profile.availability ? new Date(profile.availability).toLocaleDateString() : 'Not specified'}</p>
+            <button onClick={() => handleInvite(profile.id)} style={{ marginTop: '1rem', width: '100%', padding: '8px', background: 'green', color: 'white', border: 'none' }}>
+              Invite
+            </button>
           </div>
         )) : <p>No profiles match your criteria.</p>}
       </div>

@@ -35,7 +35,9 @@ export default function HomePage() {
   return (
     <div style={{ padding: '4rem', textAlign: 'center' }}>
       <div style={{ position: 'absolute', top: '1rem', right: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        {/* --- THIS IS THE NEW BUTTON --- */}
+        <Link href="/invitations" style={{ padding: '8px 12px', textDecoration: 'none', color: 'white' }}>
+    My Invitations
+  </Link>
         <Link href="/account" style={{ padding: '8px 12px', textDecoration: 'none', color: 'white' }}>
           My Profile
         </Link>
@@ -51,6 +53,10 @@ export default function HomePage() {
         </Link>
         <Link href="/find-group" style={{ padding: '20px 40px', border: '1px solid white', borderRadius: '8px', textDecoration: 'none', color: 'white' }}>
           Find a Group
+        </Link>
+        {/* --- THIS IS THE NEW LINK --- */}
+        <Link href="/groups/create" style={{ padding: '20px 40px', border: '1px solid #28a745', borderRadius: '8px', textDecoration: 'none', color: '#28a745', background: 'transparent' }}>
+          Create a New Group
         </Link>
       </div>
     </div>
